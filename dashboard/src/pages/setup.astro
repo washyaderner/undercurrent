@@ -1,0 +1,470 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Undercurrent - Setup Your Stack">
+  <div class="max-w-2xl mx-auto px-4 py-12">
+    <!-- Header -->
+    <header class="mb-10">
+      <a href="/" class="text-text-dim text-xs hover:text-cyan transition-colors mb-4 inline-block">&larr; back to dashboard</a>
+      <h1 class="text-2xl font-bold text-cyan tracking-tight mb-2">stack setup</h1>
+      <p class="text-text-dim text-sm">Tell Undercurrent what you use. Takes 60 seconds. Signals get filtered to what matters to you.</p>
+    </header>
+
+    <!-- Progress bar -->
+    <div class="mb-8">
+      <div class="flex justify-between text-xs text-text-dim mb-2">
+        <span id="step-label">Step 1 of 6</span>
+        <span id="step-pct">0%</span>
+      </div>
+      <div class="w-full h-1 bg-surface rounded-full overflow-hidden">
+        <div id="progress-bar" class="h-full bg-cyan transition-all duration-300 ease-out" style="width: 0%"></div>
+      </div>
+    </div>
+
+    <!-- Wizard container -->
+    <div id="wizard" class="relative overflow-hidden" style="min-height: 340px;">
+
+      <!-- Step 1: What are you building? -->
+      <div class="wizard-step" data-step="1">
+        <h2 class="text-lg font-semibold text-text mb-1">What are you building?</h2>
+        <p class="text-xs text-text-dim mb-6">Pick the closest fit. This shapes how signals get scored for you.</p>
+        <div class="grid gap-3" id="step1-options">
+          <button class="wizard-option" data-value="saas">
+            <span class="text-sm font-medium text-text">SaaS product</span>
+            <span class="text-xs text-text-dim">Shipping a product people pay for</span>
+          </button>
+          <button class="wizard-option" data-value="agency">
+            <span class="text-sm font-medium text-text">Agency / freelance</span>
+            <span class="text-xs text-text-dim">Building for clients, shipping fast</span>
+          </button>
+          <button class="wizard-option" data-value="open-source">
+            <span class="text-sm font-medium text-text">Open source</span>
+            <span class="text-xs text-text-dim">Maintaining or contributing to OSS</span>
+          </button>
+          <button class="wizard-option" data-value="personal-tools">
+            <span class="text-sm font-medium text-text">Personal tools</span>
+            <span class="text-xs text-text-dim">Automations, scripts, internal stuff</span>
+          </button>
+          <button class="wizard-option" data-value="learning">
+            <span class="text-sm font-medium text-text">Learning / exploring</span>
+            <span class="text-xs text-text-dim">Trying things out, building skills</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Primary stack -->
+      <div class="wizard-step hidden" data-step="2">
+        <h2 class="text-lg font-semibold text-text mb-1">Primary stack?</h2>
+        <p class="text-xs text-text-dim mb-6">Select all that apply. These filter what's relevant in your kits.</p>
+        <div class="grid grid-cols-2 gap-3" id="step2-options">
+          <button class="wizard-checkbox" data-value="typescript">TypeScript</button>
+          <button class="wizard-checkbox" data-value="python">Python</button>
+          <button class="wizard-checkbox" data-value="rust">Rust</button>
+          <button class="wizard-checkbox" data-value="go">Go</button>
+          <button class="wizard-checkbox" data-value="java">Java / Kotlin</button>
+          <button class="wizard-checkbox" data-value="swift">Swift</button>
+          <button class="wizard-checkbox" data-value="csharp">C# / .NET</button>
+          <button class="wizard-checkbox" data-value="ruby">Ruby</button>
+        </div>
+        <button id="step2-next" class="wizard-next mt-6">Continue</button>
+      </div>
+
+      <!-- Step 3: AI tools -->
+      <div class="wizard-step hidden" data-step="3">
+        <h2 class="text-lg font-semibold text-text mb-1">AI tools in use?</h2>
+        <p class="text-xs text-text-dim mb-6">What's already in your workflow? Helps us flag what's new vs. what you already know.</p>
+        <div class="grid grid-cols-2 gap-3" id="step3-options">
+          <button class="wizard-checkbox" data-value="claude">Claude / Anthropic</button>
+          <button class="wizard-checkbox" data-value="openai">OpenAI / ChatGPT</button>
+          <button class="wizard-checkbox" data-value="local-models">Local models (Ollama, llama.cpp)</button>
+          <button class="wizard-checkbox" data-value="langchain">LangChain / LangGraph</button>
+          <button class="wizard-checkbox" data-value="crewai">CrewAI / AutoGen</button>
+          <button class="wizard-checkbox" data-value="cursor">Cursor / Copilot</button>
+          <button class="wizard-checkbox" data-value="rag">RAG (Pinecone, Weaviate, etc.)</button>
+          <button class="wizard-checkbox" data-value="fine-tuning">Fine-tuning / training</button>
+        </div>
+        <button id="step3-next" class="wizard-next mt-6">Continue</button>
+      </div>
+
+      <!-- Step 4: Infrastructure -->
+      <div class="wizard-step hidden" data-step="4">
+        <h2 class="text-lg font-semibold text-text mb-1">Infrastructure?</h2>
+        <p class="text-xs text-text-dim mb-6">Where does your stuff run?</p>
+        <div class="grid grid-cols-2 gap-3" id="step4-options">
+          <button class="wizard-checkbox" data-value="cloudflare">Cloudflare</button>
+          <button class="wizard-checkbox" data-value="vercel">Vercel</button>
+          <button class="wizard-checkbox" data-value="aws">AWS</button>
+          <button class="wizard-checkbox" data-value="gcp">GCP</button>
+          <button class="wizard-checkbox" data-value="railway">Railway</button>
+          <button class="wizard-checkbox" data-value="supabase">Supabase</button>
+          <button class="wizard-checkbox" data-value="docker">Docker / containers</button>
+          <button class="wizard-checkbox" data-value="bare-metal">Bare metal / self-hosted</button>
+        </div>
+        <button id="step4-next" class="wizard-next mt-6">Continue</button>
+      </div>
+
+      <!-- Step 5: Priorities -->
+      <div class="wizard-step hidden" data-step="5">
+        <h2 class="text-lg font-semibold text-text mb-1">What matters most?</h2>
+        <p class="text-xs text-text-dim mb-6">Drag to rank, or just pick your top 2. Shapes which signals get promoted.</p>
+        <div class="grid gap-3" id="step5-options">
+          <button class="wizard-checkbox" data-value="cost">Low cost / efficiency</button>
+          <button class="wizard-checkbox" data-value="speed">Ship speed</button>
+          <button class="wizard-checkbox" data-value="quality">Output quality</button>
+          <button class="wizard-checkbox" data-value="privacy">Privacy / data control</button>
+          <button class="wizard-checkbox" data-value="simplicity">Simplicity / fewer dependencies</button>
+        </div>
+        <button id="step5-next" class="wizard-next mt-6">Continue</button>
+      </div>
+
+      <!-- Step 6: Trusted sources -->
+      <div class="wizard-step hidden" data-step="6">
+        <h2 class="text-lg font-semibold text-text mb-1">Sources you trust?</h2>
+        <p class="text-xs text-text-dim mb-6">Where do you already look? Signals from these get a relevance boost.</p>
+        <div class="grid grid-cols-2 gap-3" id="step6-options">
+          <button class="wizard-checkbox" data-value="hn">Hacker News</button>
+          <button class="wizard-checkbox" data-value="reddit">Reddit</button>
+          <button class="wizard-checkbox" data-value="github">GitHub trending</button>
+          <button class="wizard-checkbox" data-value="twitter">Twitter / X</button>
+          <button class="wizard-checkbox" data-value="arxiv">arXiv / papers</button>
+          <button class="wizard-checkbox" data-value="youtube">YouTube (tech)</button>
+          <button class="wizard-checkbox" data-value="newsletters">Newsletters / blogs</button>
+          <button class="wizard-checkbox" data-value="discord">Discord / Slack communities</button>
+        </div>
+        <button id="step6-finish" class="wizard-next mt-6 !bg-cyan/20 !border-cyan/50 !text-cyan">Generate my-stack.md</button>
+      </div>
+
+      <!-- Complete screen -->
+      <div class="wizard-step hidden" data-step="done">
+        <div class="text-center py-6">
+          <div class="w-12 h-12 rounded-full bg-cyan/20 border border-cyan/30 flex items-center justify-center mx-auto mb-4">
+            <span class="text-cyan text-lg">&#10003;</span>
+          </div>
+          <h2 class="text-lg font-semibold text-text mb-2">Stack configured</h2>
+          <p class="text-xs text-text-dim mb-8">Your dashboard is now personalized. Signals are filtered to your stack.</p>
+        </div>
+
+        <div class="bg-surface border border-border rounded-lg p-4 mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs text-text-dim uppercase tracking-wider">my-stack.md</span>
+            <button id="copy-btn" class="text-xs px-3 py-1 bg-surface-hover text-text-dim border border-border rounded hover:text-cyan hover:border-cyan/30 transition-colors">
+              Copy
+            </button>
+          </div>
+          <pre id="stack-preview" class="text-xs text-text-dim leading-relaxed max-h-64 overflow-y-auto whitespace-pre-wrap"></pre>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="download-btn" class="flex-1 wizard-next !bg-cyan/20 !border-cyan/50 !text-cyan">
+            Download my-stack.md
+          </button>
+          <a href="/" class="flex-1 wizard-next text-center">
+            Go to dashboard
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard hint -->
+    <div class="mt-8 text-center">
+      <span class="text-xs text-text-dim">Use <kbd class="px-1.5 py-0.5 bg-surface border border-border rounded text-text text-xs">1</kbd>-<kbd class="px-1.5 py-0.5 bg-surface border border-border rounded text-text text-xs">8</kbd> to select, <kbd class="px-1.5 py-0.5 bg-surface border border-border rounded text-text text-xs">Enter</kbd> to continue</span>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .wizard-step {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .wizard-step.hidden {
+    display: none;
+  }
+  .wizard-step.fade-out {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  .wizard-step.fade-in {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  .wizard-option {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 14px 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .wizard-option:hover {
+    border-color: rgba(6, 182, 212, 0.3);
+    background: var(--color-surface-hover);
+  }
+  .wizard-option.selected {
+    border-color: var(--color-cyan);
+    background: rgba(6, 182, 212, 0.08);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.1);
+  }
+
+  .wizard-checkbox {
+    padding: 12px 16px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--color-text);
+    transition: all 0.15s ease;
+  }
+  .wizard-checkbox:hover {
+    border-color: rgba(6, 182, 212, 0.3);
+    background: var(--color-surface-hover);
+  }
+  .wizard-checkbox.selected {
+    border-color: var(--color-cyan);
+    background: rgba(6, 182, 212, 0.08);
+    color: var(--color-cyan);
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.1);
+  }
+
+  .wizard-next {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: var(--color-text);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+  }
+  .wizard-next:hover {
+    border-color: rgba(6, 182, 212, 0.3);
+    background: var(--color-surface-hover);
+  }
+
+  kbd {
+    font-family: var(--font-mono);
+  }
+</style>
+
+<script>
+  const state: Record<string, string | string[]> = {
+    building: '',
+    stack: [],
+    ai_tools: [],
+    infra: [],
+    priorities: [],
+    sources: [],
+  };
+
+  const totalSteps = 6;
+  let currentStep = 1;
+
+  function updateProgress() {
+    const pct = currentStep <= totalSteps ? Math.round(((currentStep - 1) / totalSteps) * 100) : 100;
+    const bar = document.getElementById('progress-bar') as HTMLElement;
+    const label = document.getElementById('step-label') as HTMLElement;
+    const pctEl = document.getElementById('step-pct') as HTMLElement;
+    bar.style.width = pct + '%';
+    label.textContent = currentStep <= totalSteps ? `Step ${currentStep} of ${totalSteps}` : 'Done';
+    pctEl.textContent = pct + '%';
+  }
+
+  function goToStep(step: number | 'done') {
+    const current = document.querySelector(`.wizard-step:not(.hidden)`) as HTMLElement;
+    if (current) {
+      current.classList.add('fade-out');
+      setTimeout(() => {
+        current.classList.add('hidden');
+        current.classList.remove('fade-out');
+        showStep(step);
+      }, 200);
+    } else {
+      showStep(step);
+    }
+  }
+
+  function showStep(step: number | 'done') {
+    const selector = step === 'done' ? '[data-step="done"]' : `[data-step="${step}"]`;
+    const next = document.querySelector(selector) as HTMLElement;
+    if (!next) return;
+    next.classList.remove('hidden');
+    next.classList.add('fade-in');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        next.classList.remove('fade-in');
+      });
+    });
+    if (typeof step === 'number') currentStep = step;
+    updateProgress();
+  }
+
+  // Step 1: single select, auto-advance
+  document.querySelectorAll('#step1-options .wizard-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#step1-options .wizard-option').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      state.building = (btn as HTMLElement).dataset.value || '';
+      setTimeout(() => goToStep(2), 300);
+    });
+  });
+
+  // Steps 2-6: multi-select with continue button
+  function setupMultiStep(stepNum: number, stateKey: string, nextAction: () => void) {
+    const container = document.getElementById(`step${stepNum}-options`) as HTMLElement;
+    container.querySelectorAll('.wizard-checkbox').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('selected');
+        const selected = Array.from(container.querySelectorAll('.wizard-checkbox.selected'))
+          .map(b => (b as HTMLElement).dataset.value || '');
+        (state as any)[stateKey] = selected;
+      });
+    });
+
+    const nextBtn = document.getElementById(`step${stepNum}-next`) || document.getElementById(`step${stepNum}-finish`);
+    if (nextBtn) {
+      nextBtn.addEventListener('click', nextAction);
+    }
+  }
+
+  setupMultiStep(2, 'stack', () => goToStep(3));
+  setupMultiStep(3, 'ai_tools', () => goToStep(4));
+  setupMultiStep(4, 'infra', () => goToStep(5));
+  setupMultiStep(5, 'priorities', () => goToStep(6));
+  setupMultiStep(6, 'sources', () => {
+    finishWizard();
+  });
+
+  function generateStackMd(): string {
+    const date = new Date().toISOString().split('T')[0];
+    let md = `# my-stack.md\n\n`;
+    md += `> Generated by Undercurrent on ${date}\n`;
+    md += `> Paste this into Claude Code or any AI tool for stack-aware context.\n\n`;
+
+    md += `## Identity\n\n`;
+    md += `- **Building:** ${state.building}\n\n`;
+
+    md += `## Stack\n\n`;
+    const stack = state.stack as string[];
+    if (stack.length > 0) {
+      stack.forEach(s => { md += `- ${s}\n`; });
+    } else {
+      md += `- (none selected)\n`;
+    }
+    md += `\n`;
+
+    md += `## AI Tools\n\n`;
+    const tools = state.ai_tools as string[];
+    if (tools.length > 0) {
+      tools.forEach(t => { md += `- ${t}\n`; });
+    } else {
+      md += `- (none selected)\n`;
+    }
+    md += `\n`;
+
+    md += `## Infrastructure\n\n`;
+    const infra = state.infra as string[];
+    if (infra.length > 0) {
+      infra.forEach(i => { md += `- ${i}\n`; });
+    } else {
+      md += `- (none selected)\n`;
+    }
+    md += `\n`;
+
+    md += `## Priorities\n\n`;
+    const priorities = state.priorities as string[];
+    if (priorities.length > 0) {
+      priorities.forEach((p, i) => { md += `${i + 1}. ${p}\n`; });
+    } else {
+      md += `- (none selected)\n`;
+    }
+    md += `\n`;
+
+    md += `## Trusted Sources\n\n`;
+    const sources = state.sources as string[];
+    if (sources.length > 0) {
+      sources.forEach(s => { md += `- ${s}\n`; });
+    } else {
+      md += `- (none selected)\n`;
+    }
+    md += `\n`;
+
+    md += `---\n`;
+    md += `*Use this file as context when asking AI tools to evaluate new frameworks, libraries, or approaches. It tells them what you already have so they can focus on what's actually new to you.*\n`;
+
+    return md;
+  }
+
+  function finishWizard() {
+    const md = generateStackMd();
+    localStorage.setItem('undercurrent-stack', JSON.stringify(state));
+    localStorage.setItem('undercurrent-stack-md', md);
+    localStorage.setItem('undercurrent-setup-complete', 'true');
+
+    const preview = document.getElementById('stack-preview') as HTMLElement;
+    preview.textContent = md;
+
+    currentStep = totalSteps + 1;
+    updateProgress();
+    goToStep('done' as any);
+  }
+
+  // Download button
+  document.getElementById('download-btn')?.addEventListener('click', () => {
+    const md = localStorage.getItem('undercurrent-stack-md') || '';
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'my-stack.md';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // Copy button
+  document.getElementById('copy-btn')?.addEventListener('click', () => {
+    const md = localStorage.getItem('undercurrent-stack-md') || '';
+    navigator.clipboard.writeText(md).then(() => {
+      const btn = document.getElementById('copy-btn') as HTMLElement;
+      btn.textContent = 'Copied';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    });
+  });
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    const step = document.querySelector(`.wizard-step:not(.hidden)`) as HTMLElement;
+    if (!step) return;
+    const stepNum = step.dataset.step;
+    if (stepNum === 'done') return;
+
+    if (e.key === 'Enter') {
+      const nextBtn = step.querySelector('.wizard-next') as HTMLButtonElement;
+      if (nextBtn) nextBtn.click();
+      return;
+    }
+
+    const num = parseInt(e.key);
+    if (isNaN(num) || num < 1) return;
+
+    if (stepNum === '1') {
+      const options = step.querySelectorAll('.wizard-option');
+      if (num <= options.length) (options[num - 1] as HTMLElement).click();
+    } else {
+      const checkboxes = step.querySelectorAll('.wizard-checkbox');
+      if (num <= checkboxes.length) (checkboxes[num - 1] as HTMLElement).click();
+    }
+  });
+
+  updateProgress();
+</script>
+</Layout>

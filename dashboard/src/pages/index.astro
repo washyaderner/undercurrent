@@ -62,6 +62,21 @@ function sourceBg(source: string) {
         AI trend intelligence. Scans HN, Reddit, and GitHub every 6 hours. Filters AI-generated hype.
         Surfaces the people who were talking about it first.
       </p>
+      <!-- Setup CTA (hidden when wizard complete) -->
+      <div id="setup-cta" class="mt-4 hidden">
+        <a href="/setup" class="inline-flex items-center gap-2 text-sm px-4 py-2 bg-cyan/10 text-cyan border border-cyan/30 rounded-lg hover:bg-cyan/20 transition-colors">
+          <span class="w-2 h-2 rounded-full bg-cyan pulse-slow"></span>
+          Configure your stack for personalized signals
+        </a>
+      </div>
+      <!-- Stack badge (shown when wizard complete) -->
+      <div id="stack-badge" class="mt-4 hidden">
+        <div class="inline-flex items-center gap-2 text-xs px-3 py-1.5 bg-cyan/10 text-cyan border border-cyan/20 rounded-full">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan"></span>
+          <span id="stack-summary"></span>
+          <a href="/setup" class="text-text-dim hover:text-cyan ml-1">edit</a>
+        </div>
+      </div>
     </header>
 
     <!-- Stats bar -->
@@ -319,4 +334,53 @@ function sourceBg(source: string) {
       </p>
     </footer>
   </div>
+
+  <script>
+    (function() {
+      const isSetup = localStorage.getItem('undercurrent-setup-complete') === 'true';
+      const cta = document.getElementById('setup-cta');
+      const badge = document.getElementById('stack-badge');
+      const summary = document.getElementById('stack-summary');
+
+      if (!isSetup) {
+        if (cta) cta.classList.remove('hidden');
+        return;
+      }
+
+      const raw = localStorage.getItem('undercurrent-stack');
+      if (!raw) return;
+      const stack = JSON.parse(raw);
+
+      if (badge && summary) {
+        badge.classList.remove('hidden');
+        const parts = [];
+        if (stack.building) parts.push(stack.building);
+        if (stack.stack && stack.stack.length) parts.push(stack.stack.join(', '));
+        summary.textContent = 'Stack: ' + parts.join(' / ');
+      }
+
+      const allTerms = [
+        ...(stack.stack || []),
+        ...(stack.ai_tools || []),
+        ...(stack.infra || []),
+        ...(stack.sources || []),
+      ].map((t: string) => t.toLowerCase());
+
+      function isRelevant(text: string): boolean {
+        const lower = text.toLowerCase();
+        return allTerms.some(term => lower.includes(term));
+      }
+
+      document.querySelectorAll('.bg-surface.border.border-border.rounded-lg').forEach(card => {
+        const text = card.textContent || '';
+        if (isRelevant(text)) {
+          const badge = document.createElement('span');
+          badge.className = 'text-xs px-1.5 py-0.5 bg-green/10 text-green border border-green/20 rounded-full ml-2 whitespace-nowrap';
+          badge.textContent = 'relevant';
+          const titleEl = card.querySelector('.text-sm.font-medium, .text-xl.font-bold');
+          if (titleEl) titleEl.after(badge);
+        }
+      });
+    })();
+  </script>
 </Layout>
