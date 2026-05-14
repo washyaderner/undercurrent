@@ -88,6 +88,90 @@ async function runAnalysis(env: Env): Promise<void> {
   }
 }
 
+interface StackProfile {
+  building: string;
+  stack: string[];
+  ai_tools: string[];
+  infra: string[];
+  priorities: string[];
+  sources: string[];
+}
+
+interface StackDiff {
+  absorption_score: number;
+  new_to_you: string[];
+  upgrade_opportunities: string[];
+  you_are_ahead: string[];
+  recommendation: string;
+}
+
+async function generateStackDiff(
+  topic: string,
+  items: any[],
+  stack: StackProfile,
+  env: Env,
+): Promise<StackDiff> {
+  const signalSummaries = items.slice(0, 6).map(i => {
+    const tags = JSON.parse(i.topic_tags || '[]');
+    return `- ${i.title} [tags: ${tags.join(', ')}] ${i.implementation_brief || ''}`.slice(0, 300);
+  }).join('\n');
+
+  const stackDesc = [
+    `Building: ${stack.building}`,
+    `Languages: ${stack.stack.join(', ') || 'none'}`,
+    `AI tools: ${stack.ai_tools.join(', ') || 'none'}`,
+    `Infra: ${stack.infra.join(', ') || 'none'}`,
+    `Priorities: ${stack.priorities.join(', ') || 'none'}`,
+  ].join('\n');
+
+  const prompt = `Compare this trend topic "${topic}" and its signals against a developer's current stack. Categorize each tool, approach, or technique mentioned into exactly three buckets.
+
+Developer's stack:
+${stackDesc}
+
+Signals about "${topic}":
+${signalSummaries}
+
+Return valid JSON:
+{
+  "absorption_score": <0-100, how much of this is actionable for their specific setup>,
+  "new_to_you": ["<tool/approach not in their stack, worth evaluating>"],
+  "upgrade_opportunities": ["<they use something similar but this is measurably better>"],
+  "you_are_ahead": ["<their current setup already does this or does it better>"],
+  "recommendation": "<2-3 sentences: what specifically to do next, given their stack>"
+}
+
+Be specific. Reference their actual stack items by name. If nothing overlaps, say so. absorption_score should be high when there's actionable net-new content for their setup.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 512,
+        system: [{ type: 'text', text: 'You are a stack assessment engine. Return only valid JSON, no markdown fences.', cache_control: { type: 'ephemeral' } }],
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!resp.ok) {
+      return { absorption_score: 50, new_to_you: [], upgrade_opportunities: [], you_are_ahead: [], recommendation: 'Assessment unavailable.' };
+    }
+
+    const data: any = await resp.json();
+    let text = data.content?.find((c: { type: string }) => c.type === 'text')?.text || '';
+    text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+    return JSON.parse(text);
+  } catch {
+    return { absorption_score: 50, new_to_you: [], upgrade_opportunities: [], you_are_ahead: [], recommendation: 'Assessment unavailable.' };
+  }
+}
+
 async function runPipeline(env: Env): Promise<void> {
   const start = Date.now();
   await runIngestion(env);
@@ -159,9 +243,17 @@ export default {
       return json({ highest_psychosis: rows.results, most_genuine: genuine.results });
     }
 
-    if (url.pathname === '/api/kit') {
+    if (url.pathname === '/api/kit' && (request.method === 'GET' || request.method === 'POST')) {
       const topic = url.searchParams.get('topic');
       if (!topic) return json({ error: 'topic parameter required' });
+
+      let stack: StackProfile | null = null;
+      if (request.method === 'POST') {
+        try {
+          const body = await request.json() as any;
+          if (body.stack) stack = body.stack as StackProfile;
+        } catch { /* no stack, that's fine */ }
+      }
 
       const trend = await env.DB.prepare(
         `SELECT * FROM trend_snapshots WHERE topic = ? ORDER BY snapshot_date DESC LIMIT 1`
@@ -251,6 +343,36 @@ export default {
         md += `\n`;
       }
 
+      let diffResult: StackDiff | null = null;
+      if (stack) {
+        diffResult = await generateStackDiff(topic, items, stack, env);
+
+        md += `## Stack Assessment (Absorption: ${diffResult.absorption_score}/100)\n\n`;
+        md += `> Personalized to your stack: ${stack.building} / ${stack.stack.join(', ')}\n\n`;
+
+        if (diffResult.new_to_you.length > 0) {
+          md += `### New to You\n`;
+          diffResult.new_to_you.forEach(item => { md += `- ${item}\n`; });
+          md += `\n`;
+        }
+
+        if (diffResult.upgrade_opportunities.length > 0) {
+          md += `### Upgrade Opportunities\n`;
+          diffResult.upgrade_opportunities.forEach(item => { md += `- ${item}\n`; });
+          md += `\n`;
+        }
+
+        if (diffResult.you_are_ahead.length > 0) {
+          md += `### You're Already Ahead\n`;
+          diffResult.you_are_ahead.forEach(item => { md += `- ${item}\n`; });
+          md += `\n`;
+        }
+
+        if (diffResult.recommendation) {
+          md += `### Recommendation\n\n${diffResult.recommendation}\n\n`;
+        }
+      }
+
       md += `## Prompt: Hand This to Claude Code\n\n`;
       md += "```\n";
       md += `I want to explore "${topic}" based on these emerging signals from the AI community.\n\n`;
@@ -279,7 +401,60 @@ export default {
         });
       }
 
-      return json({ topic, classification, emergence_score: trend?.emergence_score, kit: md });
+      return json({
+        topic,
+        classification,
+        emergence_score: trend?.emergence_score,
+        kit: md,
+        ...(diffResult ? { absorption_score: diffResult.absorption_score, stack_diff: diffResult } : {}),
+      });
+    }
+
+    if (url.pathname === '/api/absorption' && request.method === 'POST') {
+      try {
+        const body = await request.json() as any;
+        const stack = body.stack as StackProfile;
+        const topics = body.topics as string[];
+        if (!stack || !topics || topics.length === 0) return json({ error: 'stack and topics required' });
+
+        const scores: Record<string, number> = {};
+        for (const topic of topics.slice(0, 10)) {
+          const tagItems = await env.DB.prepare(
+            `SELECT title, topic_tags, implementation_brief
+             FROM content_items
+             WHERE topic_tags LIKE ? AND analyzed_at IS NOT NULL AND psychosis_score < 0.5
+             ORDER BY originality_score DESC LIMIT 4`
+          ).bind(`%${topic}%`).all();
+
+          if (tagItems.results.length === 0) {
+            scores[topic] = 50;
+            continue;
+          }
+
+          const allTerms = [...stack.stack, ...stack.ai_tools, ...stack.infra].map(t => t.toLowerCase());
+          const texts = tagItems.results.map(r =>
+            `${r.title} ${r.topic_tags || ''} ${(r.implementation_brief as string || '').slice(0, 200)}`
+          ).join(' ').toLowerCase();
+
+          let overlap = 0;
+          let novel = 0;
+          for (const term of allTerms) {
+            if (texts.includes(term)) overlap++;
+          }
+          const topicWords = new Set(texts.split(/\W+/).filter(w => w.length > 3));
+          for (const w of topicWords) {
+            if (!allTerms.some(t => t.includes(w) || w.includes(t))) novel++;
+          }
+
+          const noveltyRatio = novel / Math.max(topicWords.size, 1);
+          const overlapRatio = overlap / Math.max(allTerms.length, 1);
+          scores[topic] = Math.round(Math.min(100, noveltyRatio * 60 + (1 - overlapRatio) * 40));
+        }
+
+        return json({ scores });
+      } catch {
+        return json({ error: 'invalid request body' });
+      }
     }
 
     if (url.pathname === '/api/run' && request.method === 'POST') {
