@@ -2,6 +2,9 @@ name = "undercurrent"
 main = "src/worker.ts"
 compatibility_date = "2025-05-13"
 
+[assets]
+directory = "./dashboard/dist"
+
 [triggers]
 crons = ["0 */6 * * *"]
 

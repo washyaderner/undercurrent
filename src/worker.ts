@@ -399,9 +399,6 @@ export default {
       });
     }
 
-    return new Response('Undercurrent API. Endpoints: /api/trends, /api/signals, /api/voices, /api/psychosis, /api/stats', {
-      status: 200,
-      headers: { 'Content-Type': 'text/plain' },
-    });
+    return new Response('Not found', { status: 404 });
   },
 };
