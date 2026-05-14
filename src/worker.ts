@@ -159,6 +159,129 @@ export default {
       return json({ highest_psychosis: rows.results, most_genuine: genuine.results });
     }
 
+    if (url.pathname === '/api/kit') {
+      const topic = url.searchParams.get('topic');
+      if (!topic) return json({ error: 'topic parameter required' });
+
+      const trend = await env.DB.prepare(
+        `SELECT * FROM trend_snapshots WHERE topic = ? ORDER BY snapshot_date DESC LIMIT 1`
+      ).bind(topic).first();
+
+      const contentIds = trend ? JSON.parse(trend.top_content_ids as string || '[]') : [];
+      const authorNames = trend ? JSON.parse(trend.top_authors as string || '[]') : [];
+
+      let items: any[] = [];
+      if (contentIds.length > 0) {
+        const placeholders = contentIds.map(() => '?').join(',');
+        const itemRows = await env.DB.prepare(
+          `SELECT title, url, source, author, author_url, upvotes, comments, stars,
+                  originality_score, technical_depth, practical_utility, psychosis_score,
+                  topic_tags, analysis_summary, implementation_brief
+           FROM content_items WHERE id IN (${placeholders})
+           ORDER BY originality_score DESC`
+        ).bind(...contentIds).all();
+        items = itemRows.results;
+      }
+
+      if (items.length === 0) {
+        const tagItems = await env.DB.prepare(
+          `SELECT title, url, source, author, author_url, upvotes, comments, stars,
+                  originality_score, technical_depth, practical_utility, psychosis_score,
+                  topic_tags, analysis_summary, implementation_brief
+           FROM content_items
+           WHERE topic_tags LIKE ? AND analyzed_at IS NOT NULL AND psychosis_score < 0.5
+           ORDER BY originality_score DESC LIMIT 10`
+        ).bind(`%${topic}%`).all();
+        items = tagItems.results;
+      }
+
+      let authors: any[] = [];
+      if (authorNames.length > 0) {
+        const aPlaceholders = authorNames.map(() => '?').join(',');
+        const authorRows = await env.DB.prepare(
+          `SELECT name, platform, content_count, avg_originality, avg_depth, avg_psychosis
+           FROM authors WHERE name IN (${aPlaceholders})
+           ORDER BY avg_originality DESC`
+        ).bind(...authorNames).all();
+        authors = authorRows.results;
+      }
+
+      const date = new Date().toISOString().split('T')[0];
+      const classification = trend?.classification || 'detected';
+      const emergence = trend ? (trend.emergence_score as number).toFixed(1) : 'N/A';
+      const platforms = trend ? JSON.parse(trend.platforms as string || '[]') : [];
+
+      let md = `# Undercurrent Kit: ${topic}\n\n`;
+      md += `> Generated ${date} | Status: ${classification} | Emergence: ${emergence}\n`;
+      md += `> Platforms: ${platforms.join(', ') || 'multiple'}\n\n`;
+
+      md += `## What's Happening\n\n`;
+      if (trend) {
+        md += `"${topic}" has ${trend.mention_count} mentions across ${(trend.cross_platform_count as number)} platform(s) in the last 7 days.\n`;
+        md += `Velocity: ${typeof trend.velocity === 'number' ? (trend.velocity as number).toFixed(1) : trend.velocity}x week-over-week.\n\n`;
+      }
+
+      md += `## Key Signals\n\n`;
+      for (const item of items.slice(0, 8)) {
+        const scores = `originality:${((item.originality_score as number) * 100).toFixed(0)}% depth:${((item.technical_depth as number) * 100).toFixed(0)}% psychosis:${((item.psychosis_score as number) * 100).toFixed(0)}%`;
+        md += `### ${item.title}\n`;
+        md += `- **Source:** ${item.source}${item.url ? ` | [link](${item.url})` : ''}\n`;
+        md += `- **Author:** ${item.author || 'unknown'}${item.author_url ? ` ([profile](${item.author_url}))` : ''}\n`;
+        md += `- **Scores:** ${scores}\n`;
+        md += `- **Engagement:** ${item.upvotes} upvotes, ${item.comments} comments, ${item.stars} stars\n`;
+        if (item.analysis_summary) md += `- **Summary:** ${item.analysis_summary}\n`;
+        if (item.implementation_brief && item.implementation_brief !== 'No actionable implementation path.') {
+          md += `\n**Implementation:**\n${item.implementation_brief}\n`;
+        }
+        md += `\n`;
+      }
+
+      if (authors.length > 0) {
+        md += `## People to Watch\n\n`;
+        md += `These authors consistently produce original, technically deep content on this topic.\n\n`;
+        for (const a of authors) {
+          md += `- **${a.name}** (${a.platform}) - ${a.content_count} posts, originality: ${((a.avg_originality as number) * 100).toFixed(0)}%, depth: ${((a.avg_depth as number) * 100).toFixed(0)}%\n`;
+        }
+        md += `\n`;
+      } else if (authorNames.length > 0) {
+        md += `## People to Watch\n\n`;
+        for (const name of authorNames.slice(0, 8)) {
+          md += `- **${name}**\n`;
+        }
+        md += `\n`;
+      }
+
+      md += `## Prompt: Hand This to Claude Code\n\n`;
+      md += "```\n";
+      md += `I want to explore "${topic}" based on these emerging signals from the AI community.\n\n`;
+      md += `Key implementations I've found:\n`;
+      for (const item of items.slice(0, 5)) {
+        if (item.implementation_brief && item.implementation_brief !== 'No actionable implementation path.') {
+          md += `- ${item.title}: ${(item.implementation_brief as string).slice(0, 200)}...\n`;
+        }
+      }
+      md += `\nHelp me:\n`;
+      md += `1. Assess which of these approaches fits my current stack\n`;
+      md += `2. Build a minimal working prototype of the most promising one\n`;
+      md += `3. Identify what these practitioners learned that isn't in the docs yet\n`;
+      md += "```\n\n";
+
+      md += `---\n*Kit generated by [Undercurrent](https://undercurrent-dashboard.pages.dev). Trend detection is people detection.*\n`;
+
+      const download = url.searchParams.get('download') === '1';
+      if (download) {
+        return new Response(md, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'text/markdown; charset=utf-8',
+            'Content-Disposition': `attachment; filename="undercurrent-kit-${topic}-${date}.md"`,
+          },
+        });
+      }
+
+      return json({ topic, classification, emergence_score: trend?.emergence_score, kit: md });
+    }
+
     if (url.pathname === '/api/run' && request.method === 'POST') {
       await runPipeline(env);
       return json({ ok: true, message: 'pipeline complete' });
