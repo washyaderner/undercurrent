@@ -206,7 +206,36 @@ export default {
       const rows = await env.DB.prepare(
         `SELECT * FROM trend_snapshots WHERE snapshot_date >= ? ORDER BY emergence_score DESC LIMIT 30`
       ).bind(since).all();
-      return json({ trends: rows.results });
+
+      const enriched = await Promise.all(rows.results.map(async (t: any) => {
+        const contentIds = JSON.parse(t.top_content_ids || '[]');
+        let topItems: any[] = [];
+        if (contentIds.length > 0) {
+          const ph = contentIds.map(() => '?').join(',');
+          const itemRows = await env.DB.prepare(
+            `SELECT title, url, source, author, topic_tags, analysis_summary,
+                    implementation_brief, originality_score, technical_depth,
+                    practical_utility, psychosis_score, upvotes, comments, stars
+             FROM content_items WHERE id IN (${ph}) AND psychosis_score < 0.5
+             ORDER BY originality_score DESC`
+          ).bind(...contentIds).all();
+          topItems = itemRows.results;
+        }
+        if (topItems.length === 0) {
+          const tagItems = await env.DB.prepare(
+            `SELECT title, url, source, author, topic_tags, analysis_summary,
+                    implementation_brief, originality_score, technical_depth,
+                    practical_utility, psychosis_score, upvotes, comments, stars
+             FROM content_items
+             WHERE topic_tags LIKE ? AND analyzed_at IS NOT NULL AND psychosis_score < 0.5
+             ORDER BY originality_score DESC LIMIT 5`
+          ).bind(`%${t.topic}%`).all();
+          topItems = tagItems.results;
+        }
+        return { ...t, top_items: topItems };
+      }));
+
+      return json({ trends: enriched });
     }
 
     if (url.pathname === '/api/signals') {
