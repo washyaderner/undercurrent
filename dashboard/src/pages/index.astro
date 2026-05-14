@@ -74,24 +74,24 @@ function sourceBg(source: string) {
   <div class="max-w-7xl mx-auto px-4 py-8">
     <!-- Header -->
     <header class="mb-12">
-      <div class="flex items-baseline gap-3 mb-2">
-        <h1 class="text-3xl font-bold text-cyan tracking-tight">undercurrent</h1>
+      <div class="flex items-baseline gap-3 mb-2 hero-enter hero-enter-1">
+        <h1 class="text-4xl font-bold text-cyan tracking-tight">undercurrent</h1>
         <span class="text-text-dim text-sm">v0.1</span>
       </div>
-      <p class="text-text-dim text-sm max-w-2xl">
+      <p class="text-text-dim text-sm max-w-2xl hero-enter hero-enter-2">
         AI trend intelligence. Scans HN, Reddit, and GitHub every 6 hours. Filters AI-generated hype.
         Surfaces the people who were talking about it first.
       </p>
       <!-- Setup CTA (hidden when wizard complete) -->
       <div id="setup-cta" class="mt-4 hidden">
-        <a href="/setup" class="inline-flex items-center gap-2 text-sm px-4 py-2 bg-cyan/10 text-cyan border border-cyan/30 rounded-lg hover:bg-cyan/20 transition-colors">
+        <a href="/setup" class="inline-flex items-center gap-2 text-sm px-4 py-2 bg-cyan/10 text-cyan border border-cyan/30 rounded-lg hover:bg-cyan/20 hover-lift">
           <span class="w-2 h-2 rounded-full bg-cyan pulse-slow"></span>
           Configure your stack for personalized signals
         </a>
       </div>
       <!-- Stack badge (shown when wizard complete) -->
       <div id="stack-badge" class="mt-4 hidden">
-        <div class="inline-flex items-center gap-2 text-xs px-3 py-1.5 bg-cyan/10 text-cyan border border-cyan/20 rounded-full">
+        <div class="inline-flex items-center gap-2 text-xs px-3 py-2 bg-cyan/10 text-cyan border border-cyan/20 rounded-full">
           <span class="w-1.5 h-1.5 rounded-full bg-cyan"></span>
           <span id="stack-summary"></span>
           <a href="/setup" class="text-text-dim hover:text-cyan ml-1">edit</a>
@@ -100,28 +100,28 @@ function sourceBg(source: string) {
     </header>
 
     <!-- Stats bar -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 hero-enter hero-enter-3">
       <div class="bg-surface border border-border rounded-lg p-4">
         <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Signals Tracked</div>
         <div class="text-2xl font-bold text-cyan">{stats.total_items}</div>
       </div>
       <div class="bg-surface border border-border rounded-lg p-4">
         <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Analyzed</div>
-        <div class="text-2xl font-bold text-green">{stats.analyzed_items}</div>
+        <div class="text-2xl font-bold text-cyan">{stats.analyzed_items}</div>
       </div>
       <div class="bg-surface border border-border rounded-lg p-4">
         <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Quality Voices</div>
-        <div class="text-2xl font-bold text-purple">{stats.quality_voices}</div>
+        <div class="text-2xl font-bold text-cyan">{stats.quality_voices}</div>
       </div>
       <div class="bg-surface border border-border rounded-lg p-4">
         <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Trends Today</div>
-        <div class="text-2xl font-bold text-amber">{stats.trends_today}</div>
+        <div class="text-2xl font-bold text-cyan">{stats.trends_today}</div>
       </div>
     </div>
 
     <!-- Trends Section -->
     <section class="mb-12">
-      <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+      <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2 hero-enter hero-enter-4">
         <span class="w-2 h-2 rounded-full bg-amber pulse-slow"></span>
         Emerging Trends
       </h2>
@@ -130,12 +130,12 @@ function sourceBg(source: string) {
       ) : (
         <div class="grid gap-6">
           {trends.map((t: any) => (
-              <div class="bg-surface border border-border rounded-lg overflow-hidden hover:border-cyan/30 transition-colors">
-                <div class="p-5 pb-3">
+              <div class="bg-surface border border-border rounded-lg overflow-hidden hover-glow">
+                <div class="p-6 pb-4">
                   <div class="flex items-start justify-between mb-2">
                     <div class="flex items-center gap-3">
-                      <span class="text-xl font-bold text-text">{t.topic}</span>
-                      <span class={`text-xs px-2 py-0.5 rounded-full border ${classColor(t.classification)}`}>
+                      <span class="text-lg font-semibold text-text tracking-tight">{t.topic}</span>
+                      <span class={`text-xs px-2 py-1 rounded-full border ${classColor(t.classification)}`}>
                         {t.classification}
                       </span>
                     </div>
@@ -155,17 +155,17 @@ function sourceBg(source: string) {
                 </div>
 
                 {t.genuine.length > 0 && (
-                  <div class="px-5 pb-3">
+                  <div class="px-6 pb-3">
                     <div class="space-y-2">
                       {t.genuine.slice(0, 3).map((item: any) => (
                         <div class="bg-deep/50 rounded-lg p-3 border border-border/50">
                           <div class="flex items-start justify-between gap-3 mb-1">
                             <div class="flex items-center gap-2 min-w-0">
-                              <span class={`text-xs px-1.5 py-0.5 rounded shrink-0 ${sourceBg(item.source)}`}>
+                              <span class={`text-xs px-2 py-1 rounded shrink-0 ${sourceBg(item.source)}`}>
                                 {sourceIcon(item.source)}
                               </span>
                               {item.url ? (
-                                <a href={item.url} target="_blank" rel="noopener" class="text-xs font-medium text-text hover:text-cyan transition-colors truncate">
+                                <a href={item.url} target="_blank" rel="noopener" class="text-xs font-medium text-text hover:text-cyan truncate">
                                   {item.title}
                                 </a>
                               ) : (
@@ -178,10 +178,10 @@ function sourceBg(source: string) {
                             </div>
                           </div>
                           {item.analysis_summary && (
-                            <p class="text-xs text-text-dim leading-relaxed mt-1">{item.analysis_summary}</p>
+                            <p class="text-xs text-text-dim leading-relaxed mt-1 max-w-[65ch]">{item.analysis_summary}</p>
                           )}
                           {item.author && (
-                            <div class="mt-1.5 flex items-center gap-2">
+                            <div class="mt-2 flex items-center gap-2">
                               <span class="text-xs text-purple">{item.author}</span>
                               {item.upvotes > 0 && <span class="text-xs text-text-dim">{item.upvotes} up</span>}
                               {item.comments > 0 && <span class="text-xs text-text-dim">{item.comments} cmt</span>}
@@ -195,11 +195,11 @@ function sourceBg(source: string) {
                 )}
 
                 {t.withBriefs.length > 0 && (
-                  <div class="px-5 pb-3">
+                  <div class="px-6 pb-3">
                     <div class="text-xs text-text-dim uppercase tracking-wider mb-2">What practitioners are doing</div>
                     <div class="space-y-1.5">
                       {t.withBriefs.slice(0, 2).map((item: any) => (
-                        <div class="text-xs text-text leading-relaxed bg-cyan/5 border border-cyan/10 rounded-lg p-2.5">
+                        <div class="text-xs text-text leading-relaxed bg-cyan/5 border border-cyan/10 rounded-lg p-3">
                           {(item.implementation_brief as string).slice(0, 250)}{(item.implementation_brief as string).length > 250 ? '...' : ''}
                         </div>
                       ))}
@@ -207,11 +207,11 @@ function sourceBg(source: string) {
                   </div>
                 )}
 
-                <div class="px-5 pb-4 pt-1">
+                <div class="px-6 pb-4 pt-1">
                   {t.allTags.length > 0 && (
-                    <div class="flex flex-wrap gap-1.5 mb-3">
+                    <div class="flex flex-wrap gap-2 mb-3">
                       {t.allTags.slice(0, 8).map((tag: string) => (
-                        <span class="text-xs px-1.5 py-0.5 bg-cyan/10 text-cyan-dim rounded border border-cyan/10">
+                        <span class="text-xs px-2 py-1 bg-surface-hover text-text-dim rounded border border-border">
                           {tag}
                         </span>
                       ))}
@@ -221,14 +221,14 @@ function sourceBg(source: string) {
                     {t.authors.length > 0 ? (
                       <div class="flex flex-wrap gap-2">
                         {t.authors.slice(0, 5).map((a: string) => (
-                          <span class="text-xs px-2 py-0.5 bg-purple/10 text-purple rounded-full border border-purple/20">
+                          <span class="text-xs px-2 py-1 bg-purple/10 text-purple rounded-full border border-purple/20">
                             {a}
                           </span>
                         ))}
                       </div>
                     ) : <div />}
                     <button
-                      class="kit-download text-xs px-3 py-1.5 bg-cyan/10 text-cyan border border-cyan/30 rounded hover:bg-cyan/20 transition-colors shrink-0 cursor-pointer"
+                      class="kit-download text-xs px-3 py-2 bg-cyan/10 text-cyan border border-cyan/30 rounded hover:bg-cyan/20 hover-lift shrink-0 cursor-pointer"
                       data-topic={t.topic}
                     >
                       Download Full Kit .md
@@ -240,6 +240,8 @@ function sourceBg(source: string) {
         </div>
       )}
     </section>
+
+    <div class="sig-divider my-16"></div>
 
     <!-- Psychosis Filter Section -->
     <section class="mb-12">
@@ -254,19 +256,19 @@ function sourceBg(source: string) {
           <div class="space-y-2">
             {highest_psychosis.slice(0, 8).map((item: any) => (
               <div class="bg-surface border border-border rounded-lg p-3 flex items-start gap-3">
-                <span class={`text-xs font-mono font-bold mt-0.5 ${psychosisColor(item.psychosis_score)}`}>
+                <span class={`text-xs font-mono font-bold mt-1 ${psychosisColor(item.psychosis_score)}`}>
                   {(item.psychosis_score * 100).toFixed(0)}%
                 </span>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm text-text truncate">
                     {item.url ? (
-                      <a href={item.url} target="_blank" rel="noopener" class="hover:text-cyan transition-colors">
+                      <a href={item.url} target="_blank" rel="noopener" class="hover:text-cyan">
                         {item.title}
                       </a>
                     ) : item.title}
                   </div>
                   <div class="flex gap-2 mt-1">
-                    <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(item.source)}`}>
+                    <span class={`text-xs px-2 py-1 rounded ${sourceBg(item.source)}`}>
                       {sourceIcon(item.source)}
                     </span>
                     {item.author && <span class="text-xs text-text-dim">{item.author}</span>}
@@ -283,19 +285,19 @@ function sourceBg(source: string) {
           <div class="space-y-2">
             {most_genuine.slice(0, 8).map((item: any) => (
               <div class="bg-surface border border-border rounded-lg p-3 flex items-start gap-3">
-                <span class="text-xs font-mono font-bold mt-0.5 text-green">
+                <span class="text-xs font-mono font-bold mt-1 text-green">
                   {((1 - item.psychosis_score) * 100).toFixed(0)}%
                 </span>
                 <div class="flex-1 min-w-0">
                   <div class="text-sm text-text truncate">
                     {item.url ? (
-                      <a href={item.url} target="_blank" rel="noopener" class="hover:text-cyan transition-colors">
+                      <a href={item.url} target="_blank" rel="noopener" class="hover:text-cyan">
                         {item.title}
                       </a>
                     ) : item.title}
                   </div>
                   <div class="flex gap-2 mt-1">
-                    <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(item.source)}`}>
+                    <span class={`text-xs px-2 py-1 rounded ${sourceBg(item.source)}`}>
                       {sourceIcon(item.source)}
                     </span>
                     {item.author && <span class="text-xs text-text-dim">{item.author}</span>}
@@ -319,15 +321,15 @@ function sourceBg(source: string) {
         {signals.slice(0, 12).map((s: any) => {
           const tags = JSON.parse(s.topic_tags || '[]');
           return (
-            <div class="bg-surface border border-border rounded-lg p-4 hover:border-cyan/30 transition-colors">
+            <div class="bg-surface border border-border rounded-lg p-4 hover-glow">
               <div class="flex items-start justify-between gap-4 mb-2">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 mb-1">
-                    <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(s.source)}`}>
+                    <span class={`text-xs px-2 py-1 rounded ${sourceBg(s.source)}`}>
                       {sourceIcon(s.source)}
                     </span>
                     {s.url ? (
-                      <a href={s.url} target="_blank" rel="noopener" class="text-sm font-medium text-text hover:text-cyan transition-colors truncate">
+                      <a href={s.url} target="_blank" rel="noopener" class="text-sm font-medium text-text hover:text-cyan truncate">
                         {s.title}
                       </a>
                     ) : (
@@ -348,12 +350,12 @@ function sourceBg(source: string) {
                 </div>
               </div>
               {s.analysis_summary && (
-                <p class="text-xs text-text-dim mb-2 line-clamp-2">{s.analysis_summary}</p>
+                <p class="text-xs text-text-dim mb-2 line-clamp-2 max-w-[65ch]">{s.analysis_summary}</p>
               )}
               <div class="flex items-center justify-between">
-                <div class="flex flex-wrap gap-1.5">
+                <div class="flex flex-wrap gap-2">
                   {tags.slice(0, 4).map((tag: string) => (
-                    <span class="text-xs px-1.5 py-0.5 bg-cyan/10 text-cyan-dim rounded border border-cyan/10">
+                    <span class="text-xs px-2 py-1 bg-surface-hover text-text-dim rounded border border-border">
                       {tag}
                     </span>
                   ))}
@@ -382,7 +384,7 @@ function sourceBg(source: string) {
           {voices.map((v: any) => (
             <div class="bg-surface border border-border rounded-lg p-4">
               <div class="flex items-center gap-2 mb-2">
-                <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(v.platform)}`}>
+                <span class={`text-xs px-2 py-1 rounded ${sourceBg(v.platform)}`}>
                   {sourceIcon(v.platform)}
                 </span>
                 <span class="font-medium text-sm text-text">{v.name}</span>
@@ -408,7 +410,7 @@ function sourceBg(source: string) {
     )}
 
     <!-- Footer -->
-    <footer class="border-t border-border pt-6 mt-12 text-xs text-text-dim">
+    <footer class="border-t border-border pt-6 mt-12 text-xs text-text-dim max-w-[65ch]">
       <p>
         Undercurrent scans Hacker News, Reddit, and GitHub every 6 hours.
         Each signal is scored for AI-generated hype (psychosis filter) and genuine originality.
@@ -461,9 +463,9 @@ function sourceBg(source: string) {
         const text = card.textContent || '';
         if (isRelevant(text)) {
           const tag = document.createElement('span');
-          tag.className = 'text-xs px-1.5 py-0.5 bg-green/10 text-green border border-green/20 rounded-full ml-2 whitespace-nowrap';
+          tag.className = 'text-xs px-2 py-1 bg-green/10 text-green border border-green/20 rounded-full ml-2 whitespace-nowrap';
           tag.textContent = 'relevant';
-          const titleEl = card.querySelector('.text-sm.font-medium, .text-xl.font-bold');
+          const titleEl = card.querySelector('.text-sm.font-medium, .text-lg.font-semibold');
           if (titleEl) titleEl.after(tag);
         }
       });
