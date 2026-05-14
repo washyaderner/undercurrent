@@ -1,0 +1,21 @@
+{
+  "name": "undercurrent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute undercurrent-db --local --file=schema.sql",
+    "db:init:remote": "wrangler d1 execute undercurrent-db --file=schema.sql",
+    "ingest": "wrangler dev --test-scheduled"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250501.0",
+    "wrangler": "^4.14.0",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0"
+  }
+}

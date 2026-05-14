@@ -1,0 +1,314 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const API = 'https://undercurrent.washyaderner.workers.dev/api';
+
+const [statsRes, trendsRes, signalsRes, psychosisRes, voicesRes] = await Promise.all([
+  fetch(`${API}/stats`),
+  fetch(`${API}/trends?days=7`),
+  fetch(`${API}/signals?limit=20&min_originality=0.4`),
+  fetch(`${API}/psychosis`),
+  fetch(`${API}/voices`),
+]);
+
+const stats = await statsRes.json();
+const { trends } = await trendsRes.json();
+const { signals } = await signalsRes.json();
+const { highest_psychosis, most_genuine } = await psychosisRes.json();
+const { voices } = await voicesRes.json();
+
+function classColor(c: string) {
+  if (c === 'breakout') return 'text-red bg-red/10 border-red/30';
+  if (c === 'rising') return 'text-amber bg-amber/10 border-amber/30';
+  return 'text-cyan bg-cyan/10 border-cyan/30';
+}
+
+function scoreColor(score: number) {
+  if (score >= 0.7) return 'bg-red';
+  if (score >= 0.4) return 'bg-amber';
+  return 'bg-green';
+}
+
+function psychosisColor(score: number) {
+  if (score >= 0.6) return 'text-red';
+  if (score >= 0.3) return 'text-amber';
+  return 'text-green';
+}
+
+function sourceIcon(source: string) {
+  if (source === 'hn') return 'HN';
+  if (source === 'reddit') return 'RD';
+  if (source === 'github') return 'GH';
+  return source.toUpperCase().slice(0, 2);
+}
+
+function sourceBg(source: string) {
+  if (source === 'hn') return 'bg-amber/20 text-amber';
+  if (source === 'reddit') return 'bg-purple/20 text-purple';
+  if (source === 'github') return 'bg-cyan/20 text-cyan';
+  return 'bg-surface-hover text-text-dim';
+}
+---
+
+<Layout title="Undercurrent - AI Trend Intelligence">
+  <div class="max-w-7xl mx-auto px-4 py-8">
+    <!-- Header -->
+    <header class="mb-12">
+      <div class="flex items-baseline gap-3 mb-2">
+        <h1 class="text-3xl font-bold text-cyan tracking-tight">undercurrent</h1>
+        <span class="text-text-dim text-sm">v0.1</span>
+      </div>
+      <p class="text-text-dim text-sm max-w-2xl">
+        AI trend intelligence. Scans HN, Reddit, and GitHub every 6 hours. Filters AI-generated hype.
+        Surfaces the people who were talking about it first.
+      </p>
+    </header>
+
+    <!-- Stats bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+      <div class="bg-surface border border-border rounded-lg p-4">
+        <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Signals Tracked</div>
+        <div class="text-2xl font-bold text-cyan">{stats.total_items}</div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-4">
+        <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Analyzed</div>
+        <div class="text-2xl font-bold text-green">{stats.analyzed_items}</div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-4">
+        <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Quality Voices</div>
+        <div class="text-2xl font-bold text-purple">{stats.quality_voices}</div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-4">
+        <div class="text-text-dim text-xs uppercase tracking-wider mb-1">Trends Today</div>
+        <div class="text-2xl font-bold text-amber">{stats.trends_today}</div>
+      </div>
+    </div>
+
+    <!-- Trends Section -->
+    <section class="mb-12">
+      <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-amber pulse-slow"></span>
+        Emerging Trends
+      </h2>
+      {trends.length === 0 ? (
+        <p class="text-text-dim text-sm">No trends detected yet. Data accumulates over 7+ days.</p>
+      ) : (
+        <div class="grid gap-3">
+          {trends.map((t: any) => {
+            const platforms = JSON.parse(t.platforms || '[]');
+            const authors = JSON.parse(t.top_authors || '[]');
+            return (
+              <div class="bg-surface border border-border rounded-lg p-5 hover:border-cyan/30 transition-colors">
+                <div class="flex items-start justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <span class="text-xl font-bold text-text">{t.topic}</span>
+                    <span class={`text-xs px-2 py-0.5 rounded-full border ${classColor(t.classification)}`}>
+                      {t.classification}
+                    </span>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-sm font-semibold text-cyan">{t.emergence_score.toFixed(1)}</div>
+                    <div class="text-xs text-text-dim">emergence</div>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-4 text-xs text-text-dim">
+                  <span>{t.mention_count} mentions</span>
+                  <span>velocity: {typeof t.velocity === 'number' ? t.velocity.toFixed(1) : t.velocity}x</span>
+                  <span>platforms: {platforms.join(', ')}</span>
+                </div>
+                {authors.length > 0 && (
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    {authors.slice(0, 5).map((a: string) => (
+                      <span class="text-xs px-2 py-0.5 bg-purple/10 text-purple rounded-full border border-purple/20">
+                        {a}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+
+    <!-- Psychosis Filter Section -->
+    <section class="mb-12">
+      <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-red"></span>
+        AI Psychosis Filter
+      </h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Highest psychosis -->
+        <div>
+          <h3 class="text-sm text-red mb-3 uppercase tracking-wider">Detected Hype</h3>
+          <div class="space-y-2">
+            {highest_psychosis.slice(0, 8).map((item: any) => (
+              <div class="bg-surface border border-border rounded-lg p-3 flex items-start gap-3">
+                <span class={`text-xs font-mono font-bold mt-0.5 ${psychosisColor(item.psychosis_score)}`}>
+                  {(item.psychosis_score * 100).toFixed(0)}%
+                </span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm text-text truncate">
+                    {item.url ? (
+                      <a href={item.url} target="_blank" rel="noopener" class="hover:text-cyan transition-colors">
+                        {item.title}
+                      </a>
+                    ) : item.title}
+                  </div>
+                  <div class="flex gap-2 mt-1">
+                    <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(item.source)}`}>
+                      {sourceIcon(item.source)}
+                    </span>
+                    {item.author && <span class="text-xs text-text-dim">{item.author}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <!-- Most genuine -->
+        <div>
+          <h3 class="text-sm text-green mb-3 uppercase tracking-wider">Verified Genuine</h3>
+          <div class="space-y-2">
+            {most_genuine.slice(0, 8).map((item: any) => (
+              <div class="bg-surface border border-border rounded-lg p-3 flex items-start gap-3">
+                <span class="text-xs font-mono font-bold mt-0.5 text-green">
+                  {((1 - item.psychosis_score) * 100).toFixed(0)}%
+                </span>
+                <div class="flex-1 min-w-0">
+                  <div class="text-sm text-text truncate">
+                    {item.url ? (
+                      <a href={item.url} target="_blank" rel="noopener" class="hover:text-cyan transition-colors">
+                        {item.title}
+                      </a>
+                    ) : item.title}
+                  </div>
+                  <div class="flex gap-2 mt-1">
+                    <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(item.source)}`}>
+                      {sourceIcon(item.source)}
+                    </span>
+                    {item.author && <span class="text-xs text-text-dim">{item.author}</span>}
+                    <span class="text-xs text-amber">orig: {(item.originality_score * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Signals Section -->
+    <section class="mb-12">
+      <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-cyan"></span>
+        Latest Signals
+      </h2>
+      <div class="grid gap-3">
+        {signals.slice(0, 12).map((s: any) => {
+          const tags = JSON.parse(s.topic_tags || '[]');
+          return (
+            <div class="bg-surface border border-border rounded-lg p-4 hover:border-cyan/30 transition-colors">
+              <div class="flex items-start justify-between gap-4 mb-2">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(s.source)}`}>
+                      {sourceIcon(s.source)}
+                    </span>
+                    {s.url ? (
+                      <a href={s.url} target="_blank" rel="noopener" class="text-sm font-medium text-text hover:text-cyan transition-colors truncate">
+                        {s.title}
+                      </a>
+                    ) : (
+                      <span class="text-sm font-medium text-text truncate">{s.title}</span>
+                    )}
+                  </div>
+                </div>
+                <div class="flex gap-3 text-xs text-text-dim shrink-0">
+                  <span title="Psychosis score" class={psychosisColor(s.psychosis_score)}>
+                    P:{(s.psychosis_score * 100).toFixed(0)}
+                  </span>
+                  <span title="Originality" class="text-amber">
+                    O:{(s.originality_score * 100).toFixed(0)}
+                  </span>
+                  <span title="Technical depth" class="text-cyan">
+                    D:{(s.technical_depth * 100).toFixed(0)}
+                  </span>
+                </div>
+              </div>
+              {s.analysis_summary && (
+                <p class="text-xs text-text-dim mb-2 line-clamp-2">{s.analysis_summary}</p>
+              )}
+              <div class="flex items-center justify-between">
+                <div class="flex flex-wrap gap-1.5">
+                  {tags.slice(0, 4).map((tag: string) => (
+                    <span class="text-xs px-1.5 py-0.5 bg-cyan/10 text-cyan-dim rounded border border-cyan/10">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div class="flex gap-2 text-xs text-text-dim">
+                  {s.upvotes > 0 && <span>{s.upvotes} up</span>}
+                  {s.comments > 0 && <span>{s.comments} cmt</span>}
+                  {s.stars > 0 && <span>{s.stars} star</span>}
+                  {s.author && <span class="text-purple">{s.author}</span>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+
+    <!-- Voices Section -->
+    {voices.length > 0 && (
+      <section class="mb-12">
+        <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-purple"></span>
+          Quality Voices
+        </h2>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {voices.map((v: any) => (
+            <div class="bg-surface border border-border rounded-lg p-4">
+              <div class="flex items-center gap-2 mb-2">
+                <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(v.platform)}`}>
+                  {sourceIcon(v.platform)}
+                </span>
+                <span class="font-medium text-sm text-text">{v.name}</span>
+              </div>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <div>
+                  <div class="text-text-dim">Originality</div>
+                  <div class="text-amber font-semibold">{(v.avg_originality * 100).toFixed(0)}%</div>
+                </div>
+                <div>
+                  <div class="text-text-dim">Depth</div>
+                  <div class="text-cyan font-semibold">{(v.avg_depth * 100).toFixed(0)}%</div>
+                </div>
+                <div>
+                  <div class="text-text-dim">Posts</div>
+                  <div class="text-text font-semibold">{v.content_count}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Footer -->
+    <footer class="border-t border-border pt-6 mt-12 text-xs text-text-dim">
+      <p>
+        Undercurrent scans Hacker News, Reddit, and GitHub every 6 hours.
+        Each signal is scored for AI-generated hype (psychosis filter) and genuine originality.
+        Trend detection is people detection.
+      </p>
+      <p class="mt-2">
+        Built on Cloudflare Workers + D1 + Claude Haiku.
+        Data updates every 6 hours via cron trigger.
+      </p>
+    </footer>
+  </div>
+</Layout>

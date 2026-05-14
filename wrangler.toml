@@ -1,0 +1,14 @@
+name = "undercurrent"
+main = "src/worker.ts"
+compatibility_date = "2025-05-13"
+
+[triggers]
+crons = ["0 */6 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "undercurrent-db"
+database_id = "0703bf21-892c-40c1-b700-a617bb68a882"
+
+[vars]
+ENVIRONMENT = "production"
