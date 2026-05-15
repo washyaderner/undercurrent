@@ -4,6 +4,7 @@ import { ingestReddit } from './ingest/reddit.js';
 import { ingestGitHub } from './ingest/github.js';
 import { analyzeItems } from './analysis/analyze.js';
 import { prePsychosisScore, shouldSkipClaude } from './analysis/psychosis.js';
+import { shieldScore } from './analysis/shield.js';
 import { computeTrends, updateAuthorScores } from './trends/score.js';
 
 async function storeItems(env: Env, items: Array<import('./types.js').ContentItem>): Promise<number> {
@@ -73,16 +74,23 @@ async function runAnalysis(env: Env): Promise<void> {
   const results = await analyzeItems(batch, env);
 
   for (const [id, result] of results) {
+    const item = batch.find(b => b.id === id);
+    const shield = item
+      ? shieldScore(item.title, item.content_preview, item.url)
+      : { score: 0, flags: [] };
+
     await env.DB.prepare(
       `UPDATE content_items SET
          psychosis_score = ?, originality_score = ?, technical_depth = ?,
          practical_utility = ?, topic_tags = ?, analysis_summary = ?,
-         implementation_brief = ?, is_emerging = ?, analyzed_at = ?
+         implementation_brief = ?, is_emerging = ?, shield_score = ?,
+         shield_flags = ?, analyzed_at = ?
        WHERE id = ?`
     ).bind(
       result.psychosis_score, result.originality_score, result.technical_depth,
       result.practical_utility, JSON.stringify(result.topic_tags), result.analysis_summary,
       result.implementation_brief, result.is_emerging ? 1 : 0,
+      shield.score, shield.flags.length > 0 ? JSON.stringify(shield.flags) : null,
       new Date().toISOString(), id,
     ).run();
   }
@@ -215,7 +223,8 @@ export default {
           const itemRows = await env.DB.prepare(
             `SELECT title, url, source, author, topic_tags, analysis_summary,
                     implementation_brief, originality_score, technical_depth,
-                    practical_utility, psychosis_score, upvotes, comments, stars
+                    practical_utility, psychosis_score, shield_score, shield_flags,
+                    upvotes, comments, stars
              FROM content_items WHERE id IN (${ph}) AND psychosis_score < 0.5
              ORDER BY originality_score DESC`
           ).bind(...contentIds).all();
@@ -225,7 +234,8 @@ export default {
           const tagItems = await env.DB.prepare(
             `SELECT title, url, source, author, topic_tags, analysis_summary,
                     implementation_brief, originality_score, technical_depth,
-                    practical_utility, psychosis_score, upvotes, comments, stars
+                    practical_utility, psychosis_score, shield_score, shield_flags,
+                    upvotes, comments, stars
              FROM content_items
              WHERE topic_tags LIKE ? AND analyzed_at IS NOT NULL AND psychosis_score < 0.5
              ORDER BY originality_score DESC LIMIT 5`
@@ -297,7 +307,7 @@ export default {
         const itemRows = await env.DB.prepare(
           `SELECT title, url, source, author, author_url, upvotes, comments, stars,
                   originality_score, technical_depth, practical_utility, psychosis_score,
-                  topic_tags, analysis_summary, implementation_brief
+                  shield_score, shield_flags, topic_tags, analysis_summary, implementation_brief
            FROM content_items WHERE id IN (${placeholders})
            ORDER BY originality_score DESC`
         ).bind(...contentIds).all();
@@ -308,7 +318,7 @@ export default {
         const tagItems = await env.DB.prepare(
           `SELECT title, url, source, author, author_url, upvotes, comments, stars,
                   originality_score, technical_depth, practical_utility, psychosis_score,
-                  topic_tags, analysis_summary, implementation_brief
+                  shield_score, shield_flags, topic_tags, analysis_summary, implementation_brief
            FROM content_items
            WHERE topic_tags LIKE ? AND analyzed_at IS NOT NULL AND psychosis_score < 0.5
            ORDER BY originality_score DESC LIMIT 10`
@@ -342,10 +352,13 @@ export default {
         md += `Velocity: ${typeof trend.velocity === 'number' ? (trend.velocity as number).toFixed(1) : trend.velocity}x week-over-week.\n\n`;
       }
 
+      const flaggedItems = items.filter(i => (i.shield_score as number) > 0.3);
+
       md += `## Key Signals\n\n`;
       for (const item of items.slice(0, 8)) {
         const scores = `originality:${((item.originality_score as number) * 100).toFixed(0)}% depth:${((item.technical_depth as number) * 100).toFixed(0)}% psychosis:${((item.psychosis_score as number) * 100).toFixed(0)}%`;
-        md += `### ${item.title}\n`;
+        const shieldWarning = (item.shield_score as number) > 0.5 ? ' [SHIELD WARNING]' : (item.shield_score as number) > 0.3 ? ' [REVIEW]' : '';
+        md += `### ${item.title}${shieldWarning}\n`;
         md += `- **Source:** ${item.source}${item.url ? ` | [link](${item.url})` : ''}\n`;
         md += `- **Author:** ${item.author || 'unknown'}${item.author_url ? ` ([profile](${item.author_url}))` : ''}\n`;
         md += `- **Scores:** ${scores}\n`;
@@ -400,6 +413,17 @@ export default {
         if (diffResult.recommendation) {
           md += `### Recommendation\n\n${diffResult.recommendation}\n\n`;
         }
+      }
+
+      if (flaggedItems.length > 0) {
+        md += `## Security Notes\n\n`;
+        md += `The shield scanner flagged ${flaggedItems.length} item(s) for review before acting on their recommendations.\n\n`;
+        for (const item of flaggedItems) {
+          const flags = JSON.parse((item.shield_flags as string) || '[]');
+          const flagLabels = flags.map((f: { label: string }) => f.label).join(', ');
+          md += `- **${item.title}** (shield: ${((item.shield_score as number) * 100).toFixed(0)}%) - ${flagLabels}\n`;
+        }
+        md += `\n`;
       }
 
       md += `## Prompt: Hand This to Claude Code\n\n`;
@@ -587,6 +611,34 @@ export default {
       } catch (err) {
         return json({ error: String(err), keyPresent: !!env.ANTHROPIC_API_KEY });
       }
+    }
+
+    if (url.pathname === '/api/backfill-shield' && request.method === 'POST') {
+      const rows = await env.DB.prepare(
+        `SELECT id, title, content_preview, url
+         FROM content_items
+         WHERE analyzed_at IS NOT NULL AND shield_score IS NULL
+         LIMIT 50`
+      ).all();
+
+      let updated = 0;
+      for (const row of rows.results) {
+        const result = shieldScore(
+          row.title as string,
+          row.content_preview as string | null,
+          row.url as string | null,
+        );
+        await env.DB.prepare(
+          `UPDATE content_items SET shield_score = ?, shield_flags = ? WHERE id = ?`
+        ).bind(
+          result.score,
+          result.flags.length > 0 ? JSON.stringify(result.flags) : null,
+          row.id,
+        ).run();
+        updated++;
+      }
+
+      return json({ updated, remaining: rows.results.length === 50 ? 'more' : 'done' });
     }
 
     if (url.pathname === '/api/stats') {

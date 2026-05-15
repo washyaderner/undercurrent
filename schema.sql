@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS content_items (
   is_emerging INTEGER DEFAULT 0,
   analysis_summary TEXT,
   implementation_brief TEXT,
+  shield_score REAL,
+  shield_flags TEXT,
   analyzed_at TEXT,
   UNIQUE(source, source_id)
 );

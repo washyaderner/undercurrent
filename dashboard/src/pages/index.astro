@@ -55,6 +55,18 @@ function psychosisColor(score: number) {
   return 'text-green';
 }
 
+function shieldColor(score: number) {
+  if (score > 0.5) return 'text-red';
+  if (score > 0.2) return 'text-amber';
+  return 'text-green';
+}
+
+function shieldLabel(score: number) {
+  if (score > 0.5) return 'danger';
+  if (score > 0.2) return 'review';
+  return 'clean';
+}
+
 function sourceIcon(source: string) {
   if (source === 'hn') return 'HN';
   if (source === 'reddit') return 'RD';
@@ -175,6 +187,11 @@ function sourceBg(source: string) {
                             <div class="flex gap-2 text-xs text-text-dim shrink-0">
                               <span class="text-amber">O:{(item.originality_score * 100).toFixed(0)}</span>
                               <span class="text-cyan">D:{(item.technical_depth * 100).toFixed(0)}</span>
+                              {item.shield_score > 0.2 && (
+                                <span class={shieldColor(item.shield_score)} title={`Shield: ${shieldLabel(item.shield_score)}`}>
+                                  S:{(item.shield_score * 100).toFixed(0)}
+                                </span>
+                              )}
                             </div>
                           </div>
                           {item.analysis_summary && (
@@ -347,6 +364,11 @@ function sourceBg(source: string) {
                   <span title="Technical depth" class="text-cyan">
                     D:{(s.technical_depth * 100).toFixed(0)}
                   </span>
+                  {s.shield_score > 0.2 && (
+                    <span title={`Shield: ${shieldLabel(s.shield_score)}`} class={shieldColor(s.shield_score)}>
+                      S:{(s.shield_score * 100).toFixed(0)}
+                    </span>
+                  )}
                 </div>
               </div>
               {s.analysis_summary && (
