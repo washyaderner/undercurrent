@@ -115,11 +115,13 @@ Everything below is shipped and running at `undercurrent.washyaderner.workers.de
 
 ---
 
-## Phase 3: Inbound Shield
+## Phase 3: Inbound Shield [DONE]
 
 > Content that passes the psychosis filter still needs security screening before anything touches your system.
 
 **Goal:** Detect and flag scams, prompt injection, malicious code, and social engineering in ingested content.
+
+**Shipped 2026-05-14 at 75ff9f2.** Three-layer deterministic scanner in `src/analysis/shield.ts`. 91 items backfilled (90 clean, 1 expected false positive). Dashboard shows conditional shield indicators. Kit markdown includes warnings.
 
 ### 3a: URL/Payload Screening
 - Known-bad domain list (phishing, typosquatting of popular AI tools)
@@ -243,6 +245,7 @@ Phase 3 (shield) is independent and can be built in parallel with Phase 2.
 | `src/worker.ts` | Main Worker: API routes + scheduled pipeline |
 | `src/analysis/analyze.ts` | Claude Haiku analysis pipeline |
 | `src/analysis/psychosis.ts` | Deterministic pre-screening |
+| `src/analysis/shield.ts` | Inbound shield: URL, injection, code safety scoring |
 | `src/ingest/hn.ts` | Hacker News ingestion |
 | `src/ingest/reddit.ts` | Reddit ingestion |
 | `src/ingest/github.ts` | GitHub ingestion |

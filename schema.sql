@@ -62,6 +62,22 @@ CREATE TABLE IF NOT EXISTS trend_snapshots (
   UNIQUE(topic, snapshot_date)
 );
 
+CREATE TABLE IF NOT EXISTS action_queue (
+  id TEXT PRIMARY KEY,
+  content_item_id TEXT NOT NULL,
+  action_type TEXT NOT NULL,
+  action_description TEXT NOT NULL,
+  risk_level TEXT NOT NULL,
+  reason TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at TEXT NOT NULL,
+  resolved_at TEXT,
+  FOREIGN KEY (content_item_id) REFERENCES content_items(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_actions_status ON action_queue(status);
+CREATE INDEX IF NOT EXISTS idx_actions_risk ON action_queue(risk_level);
+
 CREATE INDEX IF NOT EXISTS idx_content_source ON content_items(source);
 CREATE INDEX IF NOT EXISTS idx_content_published ON content_items(published_at);
 CREATE INDEX IF NOT EXISTS idx_content_analyzed ON content_items(analyzed_at);

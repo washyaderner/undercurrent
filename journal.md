@@ -14,3 +14,15 @@ Key changes:
 - max-w-[65ch] on analysis summaries, briefs, footer (T3)
 - Three hover vocabularies: glow (cards), lift (buttons), color-snap (links) (UX-23)
 Lesson: CSS-only fixes (easing, animations, utility classes) can flip 3-4 evals without touching HTML structure. Neutralizing accent elements (tags to surface-hover) is higher ROI than removing them.
+
+## 2026-05-14 | SHIP | 86efbe7..75ff9f2
+
+Shipped: Phase 3 Inbound Shield. Deterministic content safety scoring with three screening layers (URL, prompt injection, dangerous code patterns). Shield scores stored in D1, surfaced on dashboard and kit markdown. Backfill completed on 91 existing items (90 clean, 1 expected false positive).
+Commits: 1 since last ship
+Key changes:
+- src/analysis/shield.ts: 15 bad domains, 14 shorteners, 5 typosquat targets, 14 injection patterns, 7 social engineering patterns, 15 dangerous code patterns
+- Shield wired into analysis pipeline, runs alongside Claude analysis
+- Dashboard shows conditional S:XX indicators on flagged items (>0.2 threshold)
+- Kit markdown adds [SHIELD WARNING] / [REVIEW] labels and Security Notes section
+- /api/backfill-shield endpoint for one-time migration of existing items
+Lesson: Deterministic regex heuristics at zero cost/latency are the right first layer. The single false positive (prompt injection discussion flagged at 0.8) validates that the scanner catches the patterns it should - context-aware filtering can come later if needed.

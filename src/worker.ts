@@ -5,6 +5,7 @@ import { ingestGitHub } from './ingest/github.js';
 import { analyzeItems } from './analysis/analyze.js';
 import { prePsychosisScore, shouldSkipClaude } from './analysis/psychosis.js';
 import { shieldScore } from './analysis/shield.js';
+import { classifyRisk } from './analysis/gate.js';
 import { computeTrends, updateAuthorScores } from './trends/score.js';
 
 async function storeItems(env: Env, items: Array<import('./types.js').ContentItem>): Promise<number> {
@@ -93,6 +94,18 @@ async function runAnalysis(env: Env): Promise<void> {
       shield.score, shield.flags.length > 0 ? JSON.stringify(shield.flags) : null,
       new Date().toISOString(), id,
     ).run();
+
+    if (result.implementation_brief && !result.implementation_brief.startsWith('No actionable implementation path') && shield.score < 0.5) {
+      const tags = result.topic_tags || [];
+      const gate = classifyRisk(item?.title || '', result.implementation_brief, tags);
+      const actionId = `act-${id}-${Date.now()}`;
+      try {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO action_queue (id, content_item_id, action_type, action_description, risk_level, reason, status, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`
+        ).bind(actionId, id, gate.risk, gate.action, gate.risk, gate.reason, new Date().toISOString()).run();
+      } catch { /* duplicate or table not ready */ }
+    }
   }
 }
 
@@ -639,6 +652,62 @@ export default {
       }
 
       return json({ updated, remaining: rows.results.length === 50 ? 'more' : 'done' });
+    }
+
+    if (url.pathname === '/api/actions' && request.method === 'GET') {
+      const status = url.searchParams.get('status') || 'pending';
+      const rows = await env.DB.prepare(
+        `SELECT a.*, c.title, c.url as item_url, c.source, c.originality_score, c.technical_depth, c.topic_tags
+         FROM action_queue a
+         LEFT JOIN content_items c ON a.content_item_id = c.id
+         WHERE a.status = ?
+         ORDER BY
+           CASE a.risk_level WHEN 'approve' THEN 0 WHEN 'suggest' THEN 1 ELSE 2 END,
+           a.created_at DESC
+         LIMIT 50`
+      ).bind(status).all();
+      return json({ actions: rows.results });
+    }
+
+    if (url.pathname.startsWith('/api/actions/') && request.method === 'POST') {
+      const parts = url.pathname.split('/');
+      const actionId = parts[3];
+      const verb = parts[4];
+      if (!actionId || !['approve', 'dismiss'].includes(verb)) {
+        return json({ error: 'invalid action' });
+      }
+      const newStatus = verb === 'approve' ? 'approved' : 'dismissed';
+      await env.DB.prepare(
+        `UPDATE action_queue SET status = ?, resolved_at = ? WHERE id = ?`
+      ).bind(newStatus, new Date().toISOString(), actionId).run();
+      return json({ ok: true, status: newStatus });
+    }
+
+    if (url.pathname === '/api/backfill-actions' && request.method === 'POST') {
+      const rows = await env.DB.prepare(
+        `SELECT id, title, implementation_brief, topic_tags, shield_score
+         FROM content_items
+         WHERE analyzed_at IS NOT NULL AND implementation_brief IS NOT NULL
+           AND implementation_brief NOT LIKE 'No actionable implementation path%'
+           AND shield_score < 0.5
+           AND id NOT IN (SELECT content_item_id FROM action_queue)
+         LIMIT 50`
+      ).all();
+
+      let created = 0;
+      for (const row of rows.results) {
+        const tags = JSON.parse((row.topic_tags as string) || '[]');
+        const gate = classifyRisk(row.title as string, row.implementation_brief as string, tags);
+        const actionId = `act-${row.id}-backfill`;
+        try {
+          await env.DB.prepare(
+            `INSERT OR IGNORE INTO action_queue (id, content_item_id, action_type, action_description, risk_level, reason, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)`
+          ).bind(actionId, row.id, gate.risk, gate.action, gate.risk, gate.reason, new Date().toISOString()).run();
+          created++;
+        } catch { /* skip */ }
+      }
+      return json({ created, remaining: rows.results.length === 50 ? 'more' : 'done' });
     }
 
     if (url.pathname === '/api/stats') {

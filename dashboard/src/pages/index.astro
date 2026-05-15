@@ -3,12 +3,13 @@ import Layout from '../layouts/Layout.astro';
 
 const API = 'https://undercurrent.washyaderner.workers.dev/api';
 
-const [statsRes, trendsRes, signalsRes, psychosisRes, voicesRes] = await Promise.all([
+const [statsRes, trendsRes, signalsRes, psychosisRes, voicesRes, actionsRes] = await Promise.all([
   fetch(`${API}/stats`),
   fetch(`${API}/trends?days=7`),
   fetch(`${API}/signals?limit=20&min_originality=0.4`),
   fetch(`${API}/psychosis`),
   fetch(`${API}/voices`),
+  fetch(`${API}/actions?status=pending`),
 ]);
 
 const stats = await statsRes.json();
@@ -16,6 +17,7 @@ const { trends: rawTrends } = await trendsRes.json();
 const { signals } = await signalsRes.json();
 const { highest_psychosis, most_genuine } = await psychosisRes.json();
 const { voices } = await voicesRes.json();
+const { actions = [] } = await actionsRes.json().catch(() => ({ actions: [] }));
 
 const trends = (rawTrends as any[]).map((t: any) => {
   const items = (t.top_items || []) as any[];
@@ -65,6 +67,18 @@ function shieldLabel(score: number) {
   if (score > 0.5) return 'danger';
   if (score > 0.2) return 'review';
   return 'clean';
+}
+
+function riskColor(level: string) {
+  if (level === 'approve') return 'text-red bg-red/10 border-red/30';
+  if (level === 'suggest') return 'text-amber bg-amber/10 border-amber/30';
+  return 'text-green bg-green/10 border-green/30';
+}
+
+function riskLabel(level: string) {
+  if (level === 'approve') return 'needs approval';
+  if (level === 'suggest') return 'suggested';
+  return 'auto-approved';
 }
 
 function sourceIcon(source: string) {
@@ -130,6 +144,64 @@ function sourceBg(source: string) {
         <div class="text-2xl font-bold text-cyan">{stats.trends_today}</div>
       </div>
     </div>
+
+    <!-- Recommended Actions -->
+    {actions.length > 0 && (
+      <section class="mb-12" id="actions-section">
+        <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-green pulse-slow"></span>
+          Recommended Actions
+          <span class="text-xs text-text-dim font-normal ml-1">({actions.length} pending)</span>
+        </h2>
+        <div class="grid gap-3">
+          {actions.map((a: any) => (
+            <div class="bg-surface border border-border rounded-lg p-4 hover-glow action-card" data-action-id={a.id}>
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class={`text-xs px-2 py-1 rounded-full border ${riskColor(a.risk_level)}`}>
+                      {riskLabel(a.risk_level)}
+                    </span>
+                    {a.source && (
+                      <span class={`text-xs px-2 py-1 rounded ${sourceBg(a.source)}`}>
+                        {sourceIcon(a.source)}
+                      </span>
+                    )}
+                    {a.title && (
+                      a.item_url ? (
+                        <a href={a.item_url} target="_blank" rel="noopener" class="text-xs text-text-dim hover:text-cyan truncate">
+                          {a.title}
+                        </a>
+                      ) : (
+                        <span class="text-xs text-text-dim truncate">{a.title}</span>
+                      )
+                    )}
+                  </div>
+                  <p class="text-sm text-text mb-1 max-w-[65ch]">{a.action_description}</p>
+                  <p class="text-xs text-text-dim">{a.reason}</p>
+                </div>
+                <div class="flex gap-2 shrink-0">
+                  <button
+                    class="action-btn text-xs px-3 py-2 bg-green/10 text-green border border-green/30 rounded hover:bg-green/20 hover-lift cursor-pointer"
+                    data-action-id={a.id}
+                    data-verb="approve"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    class="action-btn text-xs px-3 py-2 bg-surface-hover text-text-dim border border-border rounded hover:bg-red/10 hover:text-red hover:border-red/30 hover-lift cursor-pointer"
+                    data-action-id={a.id}
+                    data-verb="dismiss"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
 
     <!-- Trends Section -->
     <section class="mb-12">
@@ -490,6 +562,37 @@ function sourceBg(source: string) {
           const titleEl = card.querySelector('.text-sm.font-medium, .text-lg.font-semibold');
           if (titleEl) titleEl.after(tag);
         }
+      });
+
+      // Action approve/dismiss
+      document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const el = btn as HTMLElement;
+          const actionId = el.dataset.actionId;
+          const verb = el.dataset.verb;
+          if (!actionId || !verb) return;
+
+          el.textContent = '...';
+          el.style.pointerEvents = 'none';
+
+          try {
+            await fetch(`/api/actions/${actionId}/${verb}`, { method: 'POST' });
+            const card = el.closest('.action-card');
+            if (card) {
+              (card as HTMLElement).style.opacity = '0.3';
+              (card as HTMLElement).style.pointerEvents = 'none';
+              setTimeout(() => card.remove(), 800);
+            }
+            const section = document.getElementById('actions-section');
+            if (section) {
+              const remaining = section.querySelectorAll('.action-card:not([style*="opacity"])').length;
+              if (remaining <= 1) setTimeout(() => section.remove(), 900);
+            }
+          } catch {
+            el.textContent = verb === 'approve' ? 'Approve' : 'Dismiss';
+            el.style.pointerEvents = '';
+          }
+        });
       });
 
       // Kit download with stack context (POST)
