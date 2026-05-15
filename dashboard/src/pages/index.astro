@@ -19,6 +19,9 @@ const { highest_psychosis, most_genuine } = await psychosisRes.json();
 const { voices } = await voicesRes.json();
 const { actions = [] } = await actionsRes.json().catch(() => ({ actions: [] }));
 
+const reviewActions = (actions as any[]).filter((a: any) => a.risk_level !== 'auto');
+const autoCount = (actions as any[]).filter((a: any) => a.risk_level === 'auto').length;
+
 const trends = (rawTrends as any[]).map((t: any) => {
   const items = (t.top_items || []) as any[];
   const genuine = items.filter((i: any) => i.psychosis_score < 0.4);
@@ -144,64 +147,6 @@ function sourceBg(source: string) {
         <div class="text-2xl font-bold text-cyan">{stats.trends_today}</div>
       </div>
     </div>
-
-    <!-- Recommended Actions -->
-    {actions.length > 0 && (
-      <section class="mb-12" id="actions-section">
-        <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-green pulse-slow"></span>
-          Recommended Actions
-          <span class="text-xs text-text-dim font-normal ml-1">({actions.length} pending)</span>
-        </h2>
-        <div class="grid gap-3">
-          {actions.map((a: any) => (
-            <div class="bg-surface border border-border rounded-lg p-4 hover-glow action-card" data-action-id={a.id}>
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-2">
-                    <span class={`text-xs px-2 py-1 rounded-full border ${riskColor(a.risk_level)}`}>
-                      {riskLabel(a.risk_level)}
-                    </span>
-                    {a.source && (
-                      <span class={`text-xs px-2 py-1 rounded ${sourceBg(a.source)}`}>
-                        {sourceIcon(a.source)}
-                      </span>
-                    )}
-                    {a.title && (
-                      a.item_url ? (
-                        <a href={a.item_url} target="_blank" rel="noopener" class="text-xs text-text-dim hover:text-cyan truncate">
-                          {a.title}
-                        </a>
-                      ) : (
-                        <span class="text-xs text-text-dim truncate">{a.title}</span>
-                      )
-                    )}
-                  </div>
-                  <p class="text-sm text-text mb-1 max-w-[65ch]">{a.action_description}</p>
-                  <p class="text-xs text-text-dim">{a.reason}</p>
-                </div>
-                <div class="flex gap-2 shrink-0">
-                  <button
-                    class="action-btn text-xs px-3 py-2 bg-green/10 text-green border border-green/30 rounded hover:bg-green/20 hover-lift cursor-pointer"
-                    data-action-id={a.id}
-                    data-verb="approve"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    class="action-btn text-xs px-3 py-2 bg-surface-hover text-text-dim border border-border rounded hover:bg-red/10 hover:text-red hover:border-red/30 hover-lift cursor-pointer"
-                    data-action-id={a.id}
-                    data-verb="dismiss"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    )}
 
     <!-- Trends Section -->
     <section class="mb-12">
@@ -400,6 +345,130 @@ function sourceBg(source: string) {
       </div>
     </section>
 
+    <!-- Recommended Actions (compact) -->
+    {(reviewActions.length > 0 || autoCount > 0) && (
+      <section class="mb-12" id="actions-section">
+        <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-green"></span>
+          Recommended Actions
+          {reviewActions.length > 0 && (
+            <span class="text-xs text-text-dim font-normal ml-1">({reviewActions.length} to review)</span>
+          )}
+        </h2>
+
+        {autoCount > 0 && (
+          <div class="text-xs text-text-dim mb-4 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-green"></span>
+            {autoCount} items auto-approved this cycle
+          </div>
+        )}
+
+        {reviewActions.length > 0 && (
+          <div class="grid gap-2" id="actions-list">
+            {reviewActions.slice(0, 5).map((a: any) => (
+              <div
+                class={`bg-surface border border-border rounded-lg p-3 hover-glow action-card border-l-2 ${a.risk_level === 'approve' ? 'border-l-red' : 'border-l-amber'}`}
+                data-action-id={a.id}
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class={`text-xs px-2 py-0.5 rounded-full border ${riskColor(a.risk_level)}`}>
+                        {riskLabel(a.risk_level)}
+                      </span>
+                      {a.source && (
+                        <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(a.source)}`}>
+                          {sourceIcon(a.source)}
+                        </span>
+                      )}
+                      {a.title && (
+                        a.item_url ? (
+                          <a href={a.item_url} target="_blank" rel="noopener" class="text-xs text-text-dim hover:text-cyan truncate">
+                            {a.title}
+                          </a>
+                        ) : (
+                          <span class="text-xs text-text-dim truncate">{a.title}</span>
+                        )
+                      )}
+                    </div>
+                    <p class="text-xs text-text line-clamp-2 max-w-[65ch]">{a.action_description}</p>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button
+                      class="action-btn text-xs px-3 py-1.5 bg-green text-deep font-medium rounded hover:bg-green/80 hover-lift cursor-pointer"
+                      data-action-id={a.id}
+                      data-verb="approve"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      class="action-btn text-xs px-2 py-1.5 text-text-dim opacity-0 group-hover:opacity-100 hover:text-red cursor-pointer dismiss-btn"
+                      data-action-id={a.id}
+                      data-verb="dismiss"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {reviewActions.length > 5 && (
+          <button
+            class="mt-3 text-xs text-text-dim hover:text-cyan cursor-pointer"
+            id="show-more-actions"
+          >
+            Show {reviewActions.length - 5} more
+          </button>
+          <div class="grid gap-2 mt-2 hidden" id="actions-overflow">
+            {reviewActions.slice(5).map((a: any) => (
+              <div
+                class={`bg-surface border border-border rounded-lg p-3 hover-glow action-card border-l-2 ${a.risk_level === 'approve' ? 'border-l-red' : 'border-l-amber'}`}
+                data-action-id={a.id}
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class={`text-xs px-2 py-0.5 rounded-full border ${riskColor(a.risk_level)}`}>
+                        {riskLabel(a.risk_level)}
+                      </span>
+                      {a.source && (
+                        <span class={`text-xs px-1.5 py-0.5 rounded ${sourceBg(a.source)}`}>
+                          {sourceIcon(a.source)}
+                        </span>
+                      )}
+                      {a.title && (
+                        <span class="text-xs text-text-dim truncate">{a.title}</span>
+                      )}
+                    </div>
+                    <p class="text-xs text-text line-clamp-2 max-w-[65ch]">{a.action_description}</p>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button
+                      class="action-btn text-xs px-3 py-1.5 bg-green text-deep font-medium rounded hover:bg-green/80 hover-lift cursor-pointer"
+                      data-action-id={a.id}
+                      data-verb="approve"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      class="action-btn text-xs px-2 py-1.5 text-text-dim opacity-0 group-hover:opacity-100 hover:text-red cursor-pointer dismiss-btn"
+                      data-action-id={a.id}
+                      data-verb="dismiss"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    )}
+
     <!-- Signals Section -->
     <section class="mb-12">
       <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
@@ -564,6 +633,24 @@ function sourceBg(source: string) {
         }
       });
 
+      // Dismiss button: show on card hover
+      document.querySelectorAll('.action-card').forEach(card => {
+        const dismiss = card.querySelector('.dismiss-btn') as HTMLElement;
+        if (!dismiss) return;
+        card.addEventListener('mouseenter', () => dismiss.style.opacity = '1');
+        card.addEventListener('mouseleave', () => dismiss.style.opacity = '0');
+      });
+
+      // Show more actions toggle
+      const showMoreBtn = document.getElementById('show-more-actions');
+      const overflow = document.getElementById('actions-overflow');
+      if (showMoreBtn && overflow) {
+        showMoreBtn.addEventListener('click', () => {
+          overflow.classList.remove('hidden');
+          showMoreBtn.remove();
+        });
+      }
+
       // Action approve/dismiss
       document.querySelectorAll('.action-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -579,14 +666,15 @@ function sourceBg(source: string) {
             await fetch(`/api/actions/${actionId}/${verb}`, { method: 'POST' });
             const card = el.closest('.action-card');
             if (card) {
-              (card as HTMLElement).style.opacity = '0.3';
+              (card as HTMLElement).style.transition = 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+              (card as HTMLElement).style.opacity = '0';
               (card as HTMLElement).style.pointerEvents = 'none';
-              setTimeout(() => card.remove(), 800);
+              setTimeout(() => card.remove(), 500);
             }
             const section = document.getElementById('actions-section');
             if (section) {
-              const remaining = section.querySelectorAll('.action-card:not([style*="opacity"])').length;
-              if (remaining <= 1) setTimeout(() => section.remove(), 900);
+              const remaining = section.querySelectorAll('.action-card').length;
+              if (remaining <= 1) setTimeout(() => section.remove(), 600);
             }
           } catch {
             el.textContent = verb === 'approve' ? 'Approve' : 'Dismiss';
