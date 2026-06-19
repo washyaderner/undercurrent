@@ -15,6 +15,19 @@ Key changes:
 - Three hover vocabularies: glow (cards), lift (buttons), color-snap (links) (UX-23)
 Lesson: CSS-only fixes (easing, animations, utility classes) can flip 3-4 evals without touching HTML structure. Neutralizing accent elements (tags to surface-hover) is higher ROI than removing them.
 
+## 2026-05-14 | SHIP | 75ff9f2..9e885ea
+
+Shipped: Dashboard visual hierarchy redesign. Actions section moved below trends and psychosis filter, restoring the core value proposition (trend intelligence) above the fold. Auto-approved items collapsed to one-line summary, review items capped at 5 with expand toggle, compact card design with left-border risk colors and hover-reveal dismiss.
+Commits: 2 since last ship
+Key changes:
+- Actions section relocated from above trends to below psychosis filter
+- Auto-approved items hidden behind "N items auto-approved this cycle" summary
+- Review items capped at 5 visible with "Show N more" toggle
+- Compact cards: line-clamp-2 descriptions, no reason line, p-3 padding, border-l-2 colored by risk (red/amber)
+- Approve button filled green, dismiss text-only on hover
+- Fade-out animation on approve/dismiss uses custom easing
+Lesson: Information hierarchy is the product. Derived features (action recommendations) placed above core value (trends) invert the user experience regardless of how well they work technically. Always ask "what is this product about" before placing new sections.
+
 ## 2026-05-14 | SHIP | 86efbe7..75ff9f2
 
 Shipped: Phase 3 Inbound Shield. Deterministic content safety scoring with three screening layers (URL, prompt injection, dangerous code patterns). Shield scores stored in D1, surfaced on dashboard and kit markdown. Backfill completed on 91 existing items (90 clean, 1 expected false positive).
